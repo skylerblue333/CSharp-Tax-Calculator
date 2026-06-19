@@ -1,49 +1,28 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Http;
 using System;
-using System.Collections.Generic;
 
-namespace TaxCalculator
-{
-    public enum TaxJurisdiction { US_Federal, US_California, UK, EU_Germany }
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
 
-    public class TaxEngine
-    {
-        private static readonly Dictionary<TaxJurisdiction, decimal> Rates = new()
-        {
-            { TaxJurisdiction.US_Federal,    0.22m },
-            { TaxJurisdiction.US_California, 0.093m },
-            { TaxJurisdiction.UK,            0.20m },
-            { TaxJurisdiction.EU_Germany,    0.19m }
-        };
+app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
 
-        public decimal CalculateTax(decimal income, TaxJurisdiction jurisdiction)
-        {
-            if (!Rates.TryGetValue(jurisdiction, out var rate))
-                throw new ArgumentException($"Unknown jurisdiction: {jurisdiction}");
-            return Math.Round(income * rate, 2);
-        }
+app.MapPost("/calculate-tax", (TaxRequest req) => {
+    if (req.Amount < 0) return Results.BadRequest("Amount cannot be negative");
+    
+    decimal rate = req.Region switch {
+        "US-CA" => 0.0725m,
+        "US-NY" => 0.08875m,
+        "UK" => 0.20m,
+        _ => 0.0m
+    };
+    
+    decimal tax = req.Amount * rate;
+    return Results.Ok(new TaxResponse(req.Amount, tax, req.Amount + tax, rate));
+});
 
-        public decimal CalculateTotalWithTax(decimal income, TaxJurisdiction jurisdiction)
-        {
-            return income + CalculateTax(income, jurisdiction);
-        }
-    }
+app.Run("http://0.0.0.0:8080");
 
-    class Program
-    {
-        static void Main()
-        {
-            var engine = new TaxEngine();
-            decimal income = 85000m;
-
-            Console.WriteLine($"=== Tax Calculator ===");
-            Console.WriteLine($"Base Income: ${income:N2}\n");
-
-            foreach (TaxJurisdiction j in Enum.GetValues<TaxJurisdiction>())
-            {
-                decimal tax = engine.CalculateTax(income, j);
-                decimal total = engine.CalculateTotalWithTax(income, j);
-                Console.WriteLine($"  {j,-20} Tax: ${tax,10:N2}  Total: ${total,10:N2}");
-            }
-        }
-    }
-}
+public record TaxRequest(decimal Amount, string Region);
+public record TaxResponse(decimal Subtotal, decimal Tax, decimal Total, decimal Rate);

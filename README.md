@@ -1,17 +1,16 @@
 # CSharp-Tax-Calculator
 
-## Overview
-An enterprise tax calculation engine in C# (.NET 8) supporting multiple jurisdictions including US Federal, California, UK, and EU Germany.
+![CI](https://github.com/skylerblue333/CSharp-Tax-Calculator/workflows/CI/badge.svg)
 
-## Quick Start (1-Click Build)
-
-```bash
-git clone https://github.com/skylerblue333/CSharp-Tax-Calculator.git
-cd CSharp-Tax-Calculator
-dotnet run
-```
+High-performance .NET 8 Minimal API for calculating regional tax rates.
 
 ## Features
-- Multi-jurisdiction tax rates
-- Gross and net calculation
-- Extensible rate dictionary
+- .NET 8 Minimal APIs for maximum throughput
+- Pattern matching for fast region routing
+- Dockerized deployment
+
+## Quick Start
+```bash
+dotnet run
+curl -X POST http://localhost:8080/calculate-tax -H "Content-Type: application/json" -d '{"amount": 100, "region": "US-CA"}'
+```
