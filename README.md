@@ -1,16 +1,20 @@
 # CSharp-Tax-Calculator
 
 ![CI](https://github.com/skylerblue333/CSharp-Tax-Calculator/workflows/CI/badge.svg)
+![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)
 
-High-performance .NET 8 Minimal API for calculating regional tax rates.
+A high-performance progressive tax calculation engine built with .NET 8 Minimal APIs.
 
-## Features
-- .NET 8 Minimal APIs for maximum throughput
-- Pattern matching for fast region routing
-- Dockerized deployment
+## System Architecture
 
-## Quick Start
-```bash
-dotnet run
-curl -X POST http://localhost:8080/calculate-tax -H "Content-Type: application/json" -d '{"amount": 100, "region": "US-CA"}'
+```mermaid
+graph LR
+    Client-->|JSON/HTTP|API[.NET 8 Minimal API]
+    API-->Engine[Progressive Tax Engine]
+    Engine-->Rules[Bracket Rule Definitions]
 ```
+
+## Elite Features
+- **.NET 8 Minimal APIs**: Ultra-low overhead HTTP routing.
+- **Async I/O**: `System.Text.Json` asynchronous parsing.
+- **Progressive Brackets**: Real-world cascading tax logic.

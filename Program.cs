@@ -1,28 +1,39 @@
 using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Http;
-using System;
+using Microsoft.Extensions.DependencyInjection;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/health", () => Results.Ok(new { status = "ok", timestamp = DateTime.UtcNow }));
+app.MapPost("/api/v1/calculate", async (HttpContext context) => {
+    using var document = await JsonDocument.ParseAsync(context.Request.Body);
+    var root = document.RootElement;
+    
+    if (!root.TryGetProperty("income", out var incomeElement) || !incomeElement.TryGetDouble(out var income)) {
+        context.Response.StatusCode = 400;
+        await context.Response.WriteAsJsonAsync(new { error = "Invalid or missing 'income' field" });
+        return;
+    }
 
-app.MapPost("/calculate-tax", (TaxRequest req) => {
-    if (req.Amount < 0) return Results.BadRequest("Amount cannot be negative");
-    
-    decimal rate = req.Region switch {
-        "US-CA" => 0.0725m,
-        "US-NY" => 0.08875m,
-        "UK" => 0.20m,
-        _ => 0.0m
-    };
-    
-    decimal tax = req.Amount * rate;
-    return Results.Ok(new TaxResponse(req.Amount, tax, req.Amount + tax, rate));
+    // Progressive tax bracket calculation
+    double tax = 0;
+    if (income > 100000) {
+        tax += (income - 100000) * 0.30;
+        income = 100000;
+    }
+    if (income > 50000) {
+        tax += (income - 50000) * 0.20;
+        income = 50000;
+    }
+    tax += income * 0.10;
+
+    await context.Response.WriteAsJsonAsync(new { 
+        tax_owed = tax,
+        effective_rate = tax / (root.GetProperty("income").GetDouble() == 0 ? 1 : root.GetProperty("income").GetDouble())
+    });
 });
 
-app.Run("http://0.0.0.0:8080");
+app.MapGet("/health", () => new { status = "healthy", version = "3.0.0" });
 
-public record TaxRequest(decimal Amount, string Region);
-public record TaxResponse(decimal Subtotal, decimal Tax, decimal Total, decimal Rate);
+app.Run("http://0.0.0.0:8080");
