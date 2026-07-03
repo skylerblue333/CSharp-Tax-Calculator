@@ -1,20 +1,34 @@
 # CSharp-Tax-Calculator
 
-![CI](https://github.com/skylerblue333/CSharp-Tax-Calculator/workflows/CI/badge.svg)
-![.NET](https://img.shields.io/badge/.NET-8.0-512BD4.svg)
+Enterprise tax calculation engine in C# with multi-jurisdiction support.
 
-A high-performance progressive tax calculation engine built with .NET 8 Minimal APIs.
+## 🚀 Overview
+This repository contains a professional implementation of **CSharp Tax Calculator**. It is designed with clean code principles and focuses on functionality and reliability.
 
-## System Architecture
+## 🛠️ Tech Stack
+- **Primary Language**: CSharp
+- **Environment**: Node.js / Python / Rust (as applicable)
+- **Key Features**: 
+  - Modular architecture
+  - Clean implementation of core logic
+  - Scalable design
 
-```mermaid
-graph LR
-    Client-->|JSON/HTTP|API[.NET 8 Minimal API]
-    API-->Engine[Progressive Tax Engine]
-    Engine-->Rules[Bracket Rule Definitions]
+## 📂 Getting Started
+
+### Prerequisites
+- Ensure you have the latest version of the relevant runtime (Node.js, Python, or Rust) installed.
+
+### Installation
+```bash
+git clone https://github.com/skylerblue333/CSharp-Tax-Calculator.git
+cd CSharp-Tax-Calculator
 ```
 
-## Elite Features
-- **.NET 8 Minimal APIs**: Ultra-low overhead HTTP routing.
-- **Async I/O**: `System.Text.Json` asynchronous parsing.
-- **Progressive Brackets**: Real-world cascading tax logic.
+### Usage
+Follow the specific language conventions to run the project (e.g., `npm install`, `cargo build`, or `pip install -r requirements.txt`).
+
+## 🛡️ License
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+Built by [Skyler Blue](https://github.com/skylerblue333)
