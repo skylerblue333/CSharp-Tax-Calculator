@@ -1,6 +1,6 @@
 # CSharp-Tax-Calculator
 
-Enterprise tax calculation engine in C# with multi-jurisdiction support.
+Scalable tax calculation engine in C# with multi-jurisdiction support.
 
 ## 🚀 Overview
 This repository contains a professional implementation of **CSharp Tax Calculator**. It is designed with clean code principles and focuses on functionality and reliability.
