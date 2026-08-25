@@ -1,44 +1,56 @@
-<!-- PORTFOLIO PROJECT PROFILE: maintained by the repository owner -->
+# Sky Tax Calculator
 
-## Project profile and code-audit snapshot
+Sky Tax Calculator is a small .NET 8 service and library for applying **caller-supplied progressive rate schedules** to a numeric amount. It is jurisdiction-agnostic by design: the repository does not embed or claim to maintain current federal, state, local, or international tax law.
 
-**What this is:** **CSharp-Tax-Calculator** is a public repository described as: “Enterprise tax calculation engine in C# with multi-jurisdiction support. #SkyCoin4444 #AI #Blockchain #DevOps #Innovation” Its dominant language signals are **Python (2 files), C# (1 files)**.
+**Status: engineering beta.** This project is suitable for deterministic calculation experiments and integration testing, not for filing taxes or making legal/financial decisions without an independently validated rate schedule and professional review.
 
-**Why it has value:** Its value is best understood through the implementation evidence currently present in the repository: **19 tracked files** were observed in the shallow audit, with the source structure and existing documentation providing the project’s specific context. This README does not treat a prototype, experiment, or archive as a production system without supporting evidence.
+## API
 
-**Implementation evidence:** 1 test-related file(s) detected; 4 dependency or package manifest(s) detected; 2 build/CI/infrastructure signal(s) detected; and 3 documentation or governance file(s) detected. Test filenames observed include `tests/test_main.py`. Dependency or package files include `CSharp-Tax-Calculator.csproj`, `CSharpTaxCalculator.csproj`, `package.json`, `requirements.txt`. Build, CI, or infrastructure signals include `Dockerfile`, `.github/workflows/ci.yml`.
+`GET /healthz` provides liveness. `GET /readyz` identifies the calculator mode. `POST /v1/calculate` accepts an amount and 1–32 progressive brackets. Rates are decimal fractions from `0` to `1`; only the final bracket may have no upper bound.
 
-**Current status:** The repository is tracked on the `main` branch. The existing source tree, configuration, tests, workflows, and documentation remain authoritative for supported behavior and maturity. A code audit is not a production-readiness certification, and the presence of a test or workflow file does not establish that all checks pass.
+Example request:
 
-**Relationship to the wider portfolio:** This repository is one focused component of the broader Skyler Blue Spillers portfolio across AI, software engineering, cloud and DevOps, cybersecurity, blockchain, finance, education, social systems, and creative work. It may provide a service boundary, implementation pattern, experiment, archive, or reusable idea for related repositories. Treat repositories as technical dependencies only where documented interfaces and verified project requirements support that relationship.
+```json
+{
+  "amount": 120000,
+  "scheduleName": "example-only",
+  "brackets": [
+    {"upTo": 50000, "rate": 0.10},
+    {"upTo": 100000, "rate": 0.20},
+    {"upTo": null, "rate": 0.30}
+  ]
+}
+```
 
-**Quality and security note:** No obvious secret-like pattern was detected by the limited static scan; this is not a substitute for a security audit. No TODO/FIXME marker was detected in the scanned text files.
+For this example schedule the service returns a tax value of `21000.00` and an effective rate of `0.175`. Those numbers describe only the supplied example; they are not a statement of real-world tax liability.
 
----
+## Validation
 
-# Csharp Tax Calculator
+The calculator rejects negative amounts, amounts above one trillion, missing/excessive brackets, rates outside `0..1`, non-increasing upper bounds, non-final unbounded brackets, and schedules that do not cover the requested amount. Monetary tax output is rounded to two decimal places using `MidpointRounding.AwayFromZero`.
 
-![GitHub stars](https://img.shields.io/github/stars/skylerblue333/CSharp-Tax-Calculator?style=flat-square)
-![GitHub license](https://img.shields.io/github/license/skylerblue333/CSharp-Tax-Calculator?style=flat-square)
+## Local verification
 
-## 🌟 Overview
-**CSharp-Tax-Calculator** is a professional-grade project within the **SkyCoin4444** ecosystem. It focuses on delivering high-value solutions in the domain of **Python**.
+```bash
+dotnet restore tests/TaxCalculator.Tests.csproj
+dotnet build CSharp-Tax-Calculator.csproj -c Release --no-restore
+dotnet test tests/TaxCalculator.Tests.csproj -c Release --no-restore
+dotnet list CSharp-Tax-Calculator.csproj package --vulnerable --include-transitive
+```
 
-## 🚀 Key Features
-- **Scalable Architecture**: Designed for enterprise-level growth and performance.
-- **Modern Standards**: Implements best practices for clean code and maintainability.
-- **Robust Integration**: Built to work seamlessly within modern cloud-native environments.
+Container verification:
 
-## 🛠️ Technology Stack
-- **Primary Domain**: Python
-- **Ecosystem**: SkyCoin4444 Digital Platform
+```bash
+docker build -t sky-tax .
+docker run --rm -p 8080:8080 sky-tax
+curl http://127.0.0.1:8080/healthz
+```
 
-## 📂 Structure
-The project is organized into a modular structure to ensure clarity and ease of development.
+The runtime image executes as the built-in non-root `app` user. CI performs restore, Release build, xUnit tests, vulnerable dependency inspection, container build, non-root verification, and a live health check.
 
-## 👨‍💻 Author
-**Skyler Blue Spillers**
-*Professional Chess Player & Software Engineer*
+## SKYCOIN4444 integration
 
----
-*Powered by SkyCoin4444*
+The calculator can be consumed through a stable HTTP adapter from finance or marketplace modules when a validated rate schedule is supplied by a separate policy/configuration source. Keep tax policy data outside this repository so code and jurisdiction-specific rules have independent ownership and audit trails.
+
+## Limits
+
+This repository does not provide tax advice, jurisdiction detection, deductions, credits, filing status logic, currency conversion, payroll withholding, tax-form generation, policy updates, authentication, persistent audit history, or production deployment evidence.

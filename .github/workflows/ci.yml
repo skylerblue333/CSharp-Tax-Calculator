@@ -1,11 +1,47 @@
-name: CI
-on: [push, pull_request]
+name: tax-ci
+
+on:
+  push:
+    branches:
+      - main
+      - "product/**"
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-dotnet@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-      - run: dotnet build
+          dotnet-version: "8.0.x"
+      - name: Restore
+        run: dotnet restore tests/TaxCalculator.Tests.csproj
+      - name: Release build
+        run: dotnet build CSharp-Tax-Calculator.csproj -c Release --no-restore
+      - name: Tests
+        run: dotnet test tests/TaxCalculator.Tests.csproj -c Release --no-restore
+      - name: Vulnerable dependency check
+        run: dotnet list CSharp-Tax-Calculator.csproj package --vulnerable --include-transitive
+      - name: Build container
+        run: docker build -t sky-tax:ci .
+      - name: Verify non-root image
+        run: test "$(docker image inspect sky-tax:ci --format '{{.Config.User}}')" = "app"
+      - name: Runtime smoke test
+        run: |
+          docker run -d --rm --name sky-tax-ci -p 18080:8080 sky-tax:ci
+          trap 'docker stop sky-tax-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent http://127.0.0.1:18080/healthz; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs sky-tax-ci
+          exit 1
