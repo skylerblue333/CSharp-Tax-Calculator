@@ -1,39 +1,44 @@
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using System.Text.Json;
+using SkyTax;
 
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapPost("/api/v1/calculate", async (HttpContext context) => {
-    using var document = await JsonDocument.ParseAsync(context.Request.Body);
-    var root = document.RootElement;
-    
-    if (!root.TryGetProperty("income", out var incomeElement) || !incomeElement.TryGetDouble(out var income)) {
-        context.Response.StatusCode = 400;
-        await context.Response.WriteAsJsonAsync(new { error = "Invalid or missing 'income' field" });
-        return;
-    }
-
-    // Progressive tax bracket calculation
-    double tax = 0;
-    if (income > 100000) {
-        tax += (income - 100000) * 0.30;
-        income = 100000;
-    }
-    if (income > 50000) {
-        tax += (income - 50000) * 0.20;
-        income = 50000;
-    }
-    tax += income * 0.10;
-
-    await context.Response.WriteAsJsonAsync(new { 
-        tax_owed = tax,
-        effective_rate = tax / (root.GetProperty("income").GetDouble() == 0 ? 1 : root.GetProperty("income").GetDouble())
-    });
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["X-Request-Id"] = context.Request.Headers["X-Request-Id"].FirstOrDefault() ?? Guid.NewGuid().ToString();
+    await next();
 });
 
-app.MapGet("/health", () => new { status = "healthy", version = "3.0.0" });
+app.MapGet("/healthz", () => Results.Ok(new { status = "ok", service = "sky-tax" }));
+app.MapGet("/readyz", () => Results.Ok(new { status = "ready", calculator = "progressive-rate" }));
 
-app.Run("http://0.0.0.0:8080");
+app.MapPost("/v1/calculate", (CalculationRequest request) =>
+{
+    try
+    {
+        var brackets = request.Brackets
+            .Select(bracket => new TaxBracket(bracket.UpTo, bracket.Rate))
+            .ToArray();
+        var result = ProgressiveTaxCalculator.Calculate(request.Amount, brackets);
+        return Results.Ok(new CalculationResponse(
+            result.Amount,
+            result.Tax,
+            result.EffectiveRate,
+            request.ScheduleName ?? "caller-supplied",
+            brackets.Length));
+    }
+    catch (ArgumentException error)
+    {
+        return Results.BadRequest(new { error = error.Message });
+    }
+});
+
+app.Run();
+
+public sealed record BracketRequest(decimal? UpTo, decimal Rate);
+public sealed record CalculationRequest(decimal Amount, IReadOnlyList<BracketRequest> Brackets, string? ScheduleName);
+public sealed record CalculationResponse(decimal Amount, decimal Tax, decimal EffectiveRate, string ScheduleName, int BracketCount);
+
+public partial class Program { }
